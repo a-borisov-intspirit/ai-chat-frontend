@@ -3,8 +3,7 @@ import { Login } from '../components/login/Login';
 import { Chat } from '../components/chat/Chat';
 const Router = () => {
   const PrivateRoute = ( {children} : any): any => {
-    const isAuthenticated = false; // Replace with actual authentication logic
-    console.log(123, children);
+    const isAuthenticated = true; // Replace with actual authentication logic
     
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
