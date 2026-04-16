@@ -1,12 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router';
 import { Login } from '../components/login/Login';
 import { Chat } from '../components/chat/Chat';
+import { Layout } from '../components/layout/Layout';
 const Router = () => {
-  const PrivateRoute = ( {children} : any): any => {
-    const isAuthenticated = true; // Replace with actual authentication logic
-    
-  return isAuthenticated ? children : <Navigate to="/login" />;
-};
+  const PrivateRoute = ({ children }: any): any => {
+    const token = localStorage.getItem('access_token');
+    const isAuthenticated = !!token; // Replace with actual authentication logic
+
+    return isAuthenticated ? children : <Navigate to="/login" />;
+  };
 
   return (
     <Routes>
@@ -14,9 +16,11 @@ const Router = () => {
       <Route
         element={
           <PrivateRoute>
-            <Chat />
+            <Layout>
+              <Chat />
+            </Layout>
           </PrivateRoute>
-          }
+        }
         path="/chat"
       />
       <Route path="*" element={<Navigate to="/chat" />} />

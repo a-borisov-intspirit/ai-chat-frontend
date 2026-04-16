@@ -1,6 +1,39 @@
 .chat_history_wrapper {
   display: flex;
   flex-direction: column;
+  width: 400px;
   gap: 10px;
-  width: 300px;
+}
+
+.chat_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2d2e36;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+
+  &:hover {
+    background-color: #3d3e46;
+  }
+
+  &.active {
+    background-color: #595b64;
+    border-color: #535a74;
+  }
+}
+
+.chats_list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  height: calc(100vh - 50px);
+}
+
+.delete_icon {
+  width: 20px;
+  height: 20px;
 }

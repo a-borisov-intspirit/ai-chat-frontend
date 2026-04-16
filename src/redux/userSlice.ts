@@ -3,23 +3,32 @@ import { createSlice } from '@reduxjs/toolkit'
 export const userSlice = createSlice({
   name: 'user',
   initialState: {
-    value: 10,
+    id: null,
+    email: null,
+    accessToken: null,
+    tokens: 10000
+
   },
   reducers: {
-    increment: (state) => {
-      state.value += 1
+    login: (state, action) => {
+      const { email, id, accessToken } = action.payload
+      state.id = id
+      state.email = email
+      state.accessToken = accessToken
     },
-    decrement: (state) => {
-      state.value -= 1
+    logout: (state) => {
+      state.id = null
+      state.email = null
+      state.accessToken = null
     },
-    incrementByAmount: (state, action) => {
-      state.value += action.payload
-    },
+    setRemainingTokens: (state, action) => {
+      state.tokens = action.payload.remaining_tokens
+    }
   },
 })
 
 // Action creators are generated for each case reducer function
-export const { increment, decrement, incrementByAmount } = userSlice.actions
+export const { login, logout, setRemainingTokens } = userSlice.actions
 
 export default userSlice.reducer
 
