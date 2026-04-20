@@ -5,7 +5,7 @@ import { Layout } from '../components/layout/Layout';
 const Router = () => {
   const PrivateRoute = ({ children }: any): any => {
     const token = localStorage.getItem('access_token');
-    const isAuthenticated = !!token; // Replace with actual authentication logic
+    const isAuthenticated = !!token;
 
     return isAuthenticated ? children : <Navigate to="/login" />;
   };

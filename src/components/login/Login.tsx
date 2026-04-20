@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
-import { request } from '../../utils/api';
 import { login } from '../../redux/userSlice';
+import { supabase } from '../../utils/supabase';
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -18,13 +18,25 @@ export const Login = () => {
     setIsNewUser(!isNewUser);
   };
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
     try {
-      const res = await request('http://localhost:3000/auth/login')({ email: username, password });
-      if (res?.status === 200) {
-        localStorage.setItem('access_token', res?.data.accessToken);
-        localStorage.setItem('user_id', res?.data.id);
-        dispatch(login({ email: username, id: res?.data.id, accessToken: res?.data.accessToken }));
+      const action = isNewUser
+        ? supabase.auth.signUp({ email: username, password })
+        : supabase.auth.signInWithPassword({ email: username, password });
+
+      const { data, error } = await action;
+
+      if (error) {
+        throw error;
+      }
+
+      const session = data.session;
+      const user = data.user || session?.user;
+
+      if (session && user) {
+        localStorage.setItem('access_token', session.access_token);
+        localStorage.setItem('user_id', user.id);
+        dispatch(login({ email: user.email, id: user.id, accessToken: session.access_token }));
         navigate('/chat');
       }
     } catch (error) {
@@ -36,8 +48,8 @@ export const Login = () => {
       Login
       <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
       <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={toggleForm}>Create new user</button>
-      <button onClick={handleLogin}>Login</button>
+      <button onClick={toggleForm}>{isNewUser ? 'Already have an account' : 'Create new user'}</button>
+      <button onClick={handleSubmit}>{isNewUser ? 'Sign up' : 'Login'}</button>
     </div>
   );
 };

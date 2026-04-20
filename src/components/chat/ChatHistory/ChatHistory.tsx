@@ -11,13 +11,12 @@ import './style.scss';
 import type { RootState } from '../../../redux/store';
 
 export const ChatHistory = () => {
-  const user = useSelector((state: any) => state.user);
   const { chats, currentChatId } = useSelector((state: RootState) => state.chats);
   const dispatch = useDispatch();
 
   const selectChat = (id: number) => dispatch(setCurrentChat({ id }));
   const createChat = async () => {
-    const res = await request('http://localhost:3000/chats', METHOD.POST)({ owner_id: user.id });
+    const res = await request('http://localhost:3000/chats', METHOD.POST)({});
     const data = res?.data;
     dispatch(setChatsR({ chats: [...chats, ...data] }));
     selectChat(data[0].id);

@@ -26,7 +26,7 @@ export const Chat = () => {
     const res = await request(
       `http://localhost:3000/chats/${currentChatId}`,
       METHOD.POST,
-    )({ content: currentPrompt, owner_id: 0, role: 'user', chat_id: currentChatId, type: currentModel });
+    )({ content: currentPrompt, role: 'user', chat_id: currentChatId, type: currentModel });
     if (res?.data.content) {
       setMessages((prev) => [...prev, { content: parseMarkdown(res?.data.content), role: 'assistant' }]);
 
