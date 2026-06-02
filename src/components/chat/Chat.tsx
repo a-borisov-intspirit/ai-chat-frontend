@@ -6,6 +6,8 @@ import { setRemainingTokens } from '../../redux/userSlice';
 import './style.scss';
 import { ChatHistory } from './ChatHistory/ChatHistory';
 import { useSelector, useDispatch } from 'react-redux';
+import { fetchMessages as fetchChatMessages, insertMessage } from '../../utils/chatApi';
+import { supabase } from '../../utils/supabase';
 
 interface Message {
   content: string;
@@ -21,14 +23,44 @@ export const Chat = () => {
 
   const handleSendMessage = async () => {
     if (!currentPrompt) return;
+    if (!currentChatId) return;
     setCurrentPrompt('');
-    setMessages([...messages, { content: currentPrompt, role: 'user' }]);
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
+    const nextMessages = [...messages, { content: currentPrompt, role: 'user' as const }];
+    setMessages(nextMessages);
+
+    await insertMessage({
+      chat_id: currentChatId,
+      owner_id: userId,
+      role: 'user',
+      content: currentPrompt,
+    });
+
     const res = await request(
-      `http://localhost:3000/chats/${currentChatId}`,
+      'http://localhost:3000/chats/message',
       METHOD.POST,
-    )({ content: currentPrompt, role: 'user', chat_id: currentChatId, type: currentModel });
+    )({
+      content: currentPrompt,
+      type: currentModel,
+      history: nextMessages,
+    });
+
     if (res?.data.content) {
-      setMessages((prev) => [...prev, { content: parseMarkdown(res?.data.content), role: 'assistant' }]);
+      const assistantMessage = { content: res.data.content, role: 'assistant' as const };
+      setMessages((prev) => [
+        ...prev,
+        { content: parseMarkdown(assistantMessage.content), role: assistantMessage.role },
+      ]);
+
+      await insertMessage({
+        chat_id: currentChatId,
+        owner_id: userId,
+        role: 'assistant',
+        content: res.data.content,
+      });
 
       dispatch(setRemainingTokens({ remaining_tokens: res?.data.remainingTokens }));
     }
@@ -42,16 +74,41 @@ export const Chat = () => {
 
   useEffect(() => {
     if (!currentChatId) return;
-    const fetchMessages = async () => {
+    const loadMessages = async () => {
       try {
-        const res = await request(`http://localhost:3000/chats/${currentChatId}`, METHOD.GET)();
-        const data = await res?.data;
+        const data = await fetchChatMessages(currentChatId);
         setMessages(data);
       } catch (err) {
         console.error(err);
       }
     };
-    fetchMessages();
+    loadMessages();
+  }, [currentChatId]);
+
+  useEffect(() => {
+    if (!currentChatId) return;
+
+    const channel = supabase
+      .channel(`messages:${currentChatId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${currentChatId}`,
+        },
+        () => {
+          fetchChatMessages(currentChatId)
+            .then((data) => setMessages(data))
+            .catch(console.error);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentChatId]);
 
   return (

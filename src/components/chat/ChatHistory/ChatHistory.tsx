@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
-import { request } from '../../../utils/api';
-import { METHOD } from '../../../utils/constants';
 import { setCurrentChat, setChatsR, deleteChat } from '../../../redux/chatsSlice';
+import { createChat as createChatRow, fetchChats, removeChat } from '../../../utils/chatApi';
+import { supabase } from '../../../utils/supabase';
 
 import closeIcon from '../../../assets/close.svg';
 
@@ -15,29 +15,23 @@ export const ChatHistory = () => {
   const dispatch = useDispatch();
 
   const selectChat = (id: number) => dispatch(setCurrentChat({ id }));
-  const createChat = async () => {
-    const res = await request('http://localhost:3000/chats', METHOD.POST)({});
-    const data = res?.data;
-    dispatch(setChatsR({ chats: [...chats, ...data] }));
-    selectChat(data[0].id);
+  const handleCreateChat = async () => {
+    const chat = await createChatRow();
+    dispatch(setChatsR({ chats: [chat, ...chats] }));
+    selectChat(chat.id);
   };
 
   const handleDeleteChat = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    const res = await request(`http://localhost:3000/chats/${id}`, METHOD.DELETE)();
-    if (res?.data) {
-      dispatch(deleteChat({ id }));
-    }
+    await removeChat(id);
+    dispatch(deleteChat({ id }));
   };
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await request('http://localhost:3000/chats', METHOD.GET)();
-        const data = await res?.data;
-        if (!!data) {
-          dispatch(setChatsR({ chats: data }));
-        }
+        const data = await fetchChats();
+        dispatch(setChatsR({ chats: data }));
       } catch (err) {
         console.error(err);
       }
@@ -45,9 +39,28 @@ export const ChatHistory = () => {
     fetchHistory();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('chats-list')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chats' },
+        () => {
+          fetchChats()
+            .then((data) => dispatch(setChatsR({ chats: data })))
+            .catch(console.error);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dispatch]);
+
   return (
     <div className="chat_history_wrapper">
-      <button onClick={createChat}>Create new chat</button>
+      <button onClick={handleCreateChat}>Create new chat</button>
       <div className="chats_list">
         {!!chats?.length &&
           chats?.map((chat) => (
